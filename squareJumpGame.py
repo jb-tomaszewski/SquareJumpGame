@@ -12,11 +12,18 @@ import random
 # Import necessary user/key commands.
 from pygame.locals import (
     K_SPACE,
-    QUIT
+    QUIT,
+    K_RETURN,
 )
+
+print("K_SPACE:",K_SPACE)
 
 screen_width = 500
 screen_height = 500
+
+pygame.init()
+
+window = pygame.display.set_mode((screen_width, screen_height))
 
 # Use these variables for square jumping.
 isJumping = False
@@ -87,61 +94,100 @@ class Enemy(pygame.sprite.Sprite):
         if self.rect.right < 0: 
             self.kill()
 
-pygame.init()
+# Function for the start/death messages on screen.
+def startOrDeathScreen(screenRunning, death): 
+    font = pygame.font.Font(None, 30)
 
-window = pygame.display.set_mode((screen_width, screen_height))
+    # If your character "died", then prompt the user to try again.
+    if death: 
+        text = font.render("Press the Enter key to try again.", True, (255, 255, 255))
 
-# Create unique user event for adding
-# a new enemy every 800 milliseconds.  
-ADDENEMY = pygame.USEREVENT + 1
-pygame.time.set_timer(ADDENEMY, 800)
+    # If loading up the game for the first time, then prompt the user to start.
+    text = font.render("Press the Enter key to start.", True, (255, 255, 255))
 
-# Create the user's square character.
-square = Square()
+    text_container = text.get_rect(
+        center=(
+            screen_width/2, screen_height/2
+        )
+    )
 
-# Add the square and all enemies to 
-# the game's group of Sprites.  
-enemies = pygame.sprite.Group()
-allSprites = pygame.sprite.Group()
-allSprites.add(square)
+    # Add the message to the screen.
+    window.blit(text, text_container)
 
-windowOpen = True
+    while screenRunning: 
+        for event in pygame.event.get(): 
+            print(event.type)
+            if event.type == QUIT:
+                pygame.quit()
 
-while windowOpen: 
-    # Slight time delay allows for more smoothness with movements.
-    pygame.time.delay(50)
+        actions = pygame.key.get_pressed()
 
-    # Check if the user wants to quit the game, or if a new enemy 
-    # should be added to the screen.
-    for event in pygame.event.get(): 
-        if event.type == QUIT:
+        # If the user presses enter, then exit this screen playing the game.  
+        if actions[K_RETURN]: 
+            screenRunning = False
+
+        # Update the screen.
+        pygame.display.flip()
+
+    # Start playing the game.
+    gameRunning(True) 
+
+# Function for while the game is running.
+def gameRunning(windowOpen):
+    # Create unique user event for adding
+    # a new enemy every 800 milliseconds.  
+    ADDENEMY = pygame.USEREVENT + 1
+    pygame.time.set_timer(ADDENEMY, 800)
+
+    # Create the user's square character.
+    square = Square()
+
+    # Add the square and all enemies to 
+    # the game's group of Sprites.  
+    enemies = pygame.sprite.Group()
+    allSprites = pygame.sprite.Group()
+    allSprites.add(square)
+
+    while windowOpen: 
+        # Slight time delay allows for more smoothness with movements.
+        pygame.time.delay(50)
+
+        # Check if the user wants to quit the game, or if a new enemy 
+        # should be added to the screen.
+        for event in pygame.event.get(): 
+            if event.type == QUIT:
+                pygame.quit()
+
+            elif event.type == ADDENEMY:
+                enemy = Enemy()
+                enemies.add(enemy)
+                allSprites.add(enemy)
+
+        # See if the user wants the square to jump.
+        actions = pygame.key.get_pressed()
+        square.update(actions)
+
+        # Keep moving enemies to the left.
+        enemies.update()
+
+        # Fill the window with a black background.
+        window.fill((0, 0, 0))
+
+        # Put all Sprites (the user's square and any enemies)
+        # on the screen.
+        for sprite in allSprites:
+            window.blit(sprite.surface, sprite.rect)
+
+        # If the user's square collides with an enemy, 
+        # end the game.  
+        if pygame.sprite.spritecollideany(square, enemies): 
+            square.kill()
             windowOpen = False
 
-        elif event.type == ADDENEMY:
-            enemy = Enemy()
-            enemies.add(enemy)
-            allSprites.add(enemy)
+        # Update the screen.
+        pygame.display.flip()
 
-    # See if the user wants the square to jump.
-    actions = pygame.key.get_pressed()
-    square.update(actions)
+    startOrDeathScreen(True, True)
 
-    # Keep moving enemies to the left.
-    enemies.update()
-
-    # Fill the window with a black background.
-    window.fill((0, 0, 0))
-
-    # Put all Sprites (the user's square and any enemies)
-    # on the screen.
-    for sprite in allSprites:
-        window.blit(sprite.surface, sprite.rect)
-
-    # If the user's square collides with an enemy, 
-    # end the game.  
-    if pygame.sprite.spritecollideany(square, enemies): 
-        square.kill()
-        windowOpen = False
-
-    # Update the screen.
-    pygame.display.flip()
+# Begin with the start screen.  
+startOrDeathScreen(True, False)
